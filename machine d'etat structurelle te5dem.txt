@@ -1,0 +1,83 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
+
+entity machine_etat_structurelle is
+    Port (
+        clk      : in  STD_LOGIC;
+        reset    : in  STD_LOGIC;
+        accZ     : in  STD_LOGIC; 
+        acc15    : in  STD_LOGIC;  
+        opcode   : in  STD_LOGIC_VECTOR(3 downto 0); 
+        -- Signaux de contrôle (sorties)
+        selA     : out STD_LOGIC;
+        selB     : out STD_LOGIC;
+        pc_ld    : out STD_LOGIC;
+        ir_ld    : out STD_LOGIC;
+        acc_ld   : out STD_LOGIC;
+        acc_oe   : out STD_LOGIC;
+        alufs    : out STD_LOGIC_VECTOR(1 downto 0);
+        RnW      : out STD_LOGIC
+    );
+end machine_etat_structurelle;
+
+architecture Behavioralstructurelle of machine_etat_structurelle is
+  
+    signal next_state,state : std_logic_vector(3 downto 0);
+    signal S0,S1,S2,S3,S01,S11,S21,S31,opcode0,opcode1,opcode2,opcode3 : std_logic;
+
+begin
+	next_state <= S01 & S11 & S21 & S31;
+	S0<= state(3);
+	S1<= state(2);
+	S2<= state(1);
+	S3<= state(0);
+	
+	opcode0<= opcode(2);
+	opcode1<= opcode(1);
+	opcode2<= opcode(0);
+	opcode3<= opcode(3);
+
+--next state en fctn de input et current state
+S01 <= (not S0 and not S1 and S2 and not S3 and not opcode0 and not opcode1 and not opcode2) or (not S0 and not S1 and S2 and not S3 and opcode0 and opcode1 and opcode2) or (S0 and not S1 and not S2 and S3);
+
+S11 <= (not S0 and not S1 and S2 and not S3 and not opcode0 and opcode2) or (not S0 and not S1 and S2 and not S3 and opcode0 and not opcode1 and not opcode2) or (not S0 and not S1 and S2 and not S3 and opcode0 and not opcode2 and accz) or (not S0 and not S1 and S2 and not S3 and not opcode1 and opcode2 and not acc15);
+
+S21 <= (not S0 and not S1 and not S2 and S3) or (not S0 and not S1 and S2 and not S3 and not opcode0 and not opcode1 and opcode2) or (not S0 and not S1 and S2 and not S3 and not opcode0 and opcode1 and not opcode2) or (not S0 and not S1 and S2 and not S3 and opcode0 and not opcode1 and not opcode2) or (not S0 and not S1 and S2 and not S3 and not opcode1 and opcode2 and not acc15) or (not S0 and not S1 and S2 and not S3 and opcode1 and not opcode2 and accz);
+
+S31 <= (not S0 and not S1 and not S2 and not S3) or (not S0 and not S1 and not S3 and not opcode0 and not opcode1 and opcode2) or (not S0 and not S1 and not S3 and not opcode0 and opcode1 and not opcode2) or (S0 and not S1 and not S2 and S3);
+
+--output en fct de current state
+
+RnW <= (not S1) or (not S3);
+
+selA <= (S2 and S3) or (S1) or (S0 and not S3);
+
+selB <= (not S1 and S2 and S3) or (S1 and not S2) or (S0 and not S3);
+
+pc_ld <= (not S0 and not S2 and S3) or (S1 and S2 and not S3);
+
+ir_ld <= (not S0 and not S1 and not S2 and not S3) or (S0 and S3);
+
+acc_ld <= (S2 and S3) or (S1 and not S2) or (S0 and not S3);
+
+acc_oe <= (S1 and S3);
+
+alufs(1) <= (not S1 and S2) or (not S0 and not S1 and S3);
+
+alufs(0) <= (not S0 and not S2 and S3) or (not S1 and S2 and not S3) or (S1 and not S2);
+
+
+    -- Processus de transition d'état
+    process (clk, reset)
+    begin
+        if reset = '1' then
+            state <= "0000"; 
+        elsif rising_edge(clk) then
+            state <= next_state;
+        end if;
+    end process;
+
+   
+
+end Behavioralstructurelle;
