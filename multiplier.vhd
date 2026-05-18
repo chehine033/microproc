@@ -95,7 +95,7 @@ port( X, Y, Cin : in std_logic;
         sum, Cout : out std_logic);
 end component;
 BEGIN
-U : Full_Adder port map(X=>A(0),Y=>B(0),Cin=>Cin,sum=>S(0),Cout=>Cout);
+U : Full_Adder port map(X=>A(0),Y=>B(0),Cin=>Cin,sum=>S(0),Cout=>C(0));
 a5tani :for i in 1 to N-2 generate
     addi : Full_Adder port map (A(i),B(i),C(i-1),S(i),C(i));
  end generate;
@@ -120,23 +120,11 @@ component adder
 port (
 A,B: in std_logic_vector(8-1 downto 0);
 Cin : in std_logic;
-Cout : out std_logic;
-S : out std_logic_vector(8-1 downto 0));
+
+S : out std_logic_vector(8-1 downto 0);
+Cout : out std_logic);
 end component;
-component adder2
-port (
-A,B: in std_logic_vector(8-1 downto 0);
-Cin : in std_logic;
-Cout : out std_logic;
-S : out std_logic_vector(8-1 downto 0));
-end component;  
-component adder3
-port (
-A,B: in std_logic_vector(8-1 downto 0);
-Cin : in std_logic;
-Cout : out std_logic;
-S : out std_logic_vector(8-1 downto 0));
-end component;
+
 component  mux_4to1
  port(
      A,B: in STD_LOGIC_VECTOR(3 downto 0);
@@ -150,12 +138,12 @@ i3<="00" & om3 & "00";
 i4<="0" & om4 & "000";
 
 
-    MUX1:mux_4to1 port map (a,"0000",b(0),om1);
-    MUX2:mux_4to1 port map (a,"0000",b(1),om2);
-    MUX3:mux_4to1 port map (a,"0000",b(2),om3);
-    MUX4:mux_4to1 port map (a,"0000",b(3),om4);
+MUX1:mux_4to1 port map ("0000",a,b(0),om1);
+MUX2:mux_4to1 port map ("0000",a,b(1),om2);
+MUX3:mux_4to1 port map ("0000",a,b(2),om3);
+MUX4:mux_4to1 port map ("0000",a,b(3),om4);
    
-    add1: adder port map ( i1,i2,'0',co1, s1);
-    add2: adder2 port map ( i3 ,i4,'0',co2, s2);
-    add3: adder3 port map (s1,s2,'0',co3,p);
- end bhv;
+add1: adder port map ( i1,i2,'0',s1, co1);
+add2: adder port map ( i3 ,i4,'0',s2, co2);
+add3: adder port map (s1,s2,'0',p,co3);
+end bhv;
