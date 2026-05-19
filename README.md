@@ -42,30 +42,38 @@ The processor follows a classic **accumulator-based von Neumann architecture**. 
 
 ```
          ┌─────────────┐
-         │  Async RAM  │ ← 4096 × 16-bit, R/W, asynchronous
+         │  Async RAM  │ ← 4096 × 16-bit (64KB), R/W, asynchronous
          │  (pre-init) │
          └──────┬──────┘
-                │ data bus (16-bit, bidirectional)
+                │ data bus (16-bit, bidirectional inout)
          ┌──────▼──────┐        ┌────────────┐
          │     IR      │        │     PC     │ ← 12-bit program counter
          │ (Instr Reg) │        │  (clocked) │
          └──────┬──────┘        └──────┬─────┘
-          opcode│  addr[11:0]          │ addr[11:0]
+          opcode│  addr(11:0)          │ addr(11:0)
                 │              ┌───────▼──────┐
-                │              │  MUX_12to1   │ ← selA: PC addr vs IR operand addr
+                │              │  MUX_12to1   │ ← selA: PC addr vs IR addr
                 │              └───────┬──────┘
                 │                      │ → RAM address bus
                 │
          ┌──────▼──────┐
-         │  MUX_16to1  │ ← selB: zero-extended IR addr vs RAM data
+         │  MUX_16to1  │ ← selB: immediate (zero-extended IR addr) vs RAM data
          └──────┬──────┘
                 │ B input
          ┌──────▼──────┐        ┌────────────┐
          │     UAL     │◄───────│    ACC     │ ← Accumulator (A input)
          │    (ALU)    │        │  (clocked) │
          └──────┬──────┘        └────────────┘
-                │ ALU result → ACC / PC / RAM data bus (via tri-state buffer)
+                │ ALU result
+                └─→ ACC input / PC input / RAM data bus (via buffer1)
+         ┌─────────────┐
+         │   buffer1   │ ← acc_oe: drives ACC onto RAM data bus for STO
+         └─────────────┘
 ```
+
+The schematic below shows the complete datapath with all bus widths and control signals:
+
+![Microprocessor datapath schematic](microprocessor%20components.png)
 
 ---
 
@@ -103,6 +111,8 @@ The processor follows a classic **accumulator-based von Neumann architecture**. 
 
 - Built from generic N-bit `adder` and `subber`, each a ripple-carry chain of `Full_Adder` / `Full_Subber` instances
 
+![ALU function select codes](ALU%20codes.png)
+
 ### `MUX_12to1` / `MUX_16to1` / `buffer1`
 - **MUX_12to1** (`selA`): selects RAM address — PC output (`'0'`) or IR operand (`'1'`)
 - **MUX_16to1** (`selB`): selects ALU B-input — zero-extended IR addr (`'0'`) or RAM data (`'1'`)
@@ -112,7 +122,9 @@ The processor follows a classic **accumulator-based von Neumann architecture**. 
 
 ## Instruction Set
 
-Each instruction is **16 bits**: `opcode[15:12]` + `operand_address[11:0]`
+Each instruction is **16 bits wide**, split into a 4-bit opcode and a 12-bit operand address:
+
+![Instruction word format](microprocessor%27s%20async%20ram%20addressing%20structure.png)
 
 | Opcode | Mnemonic | Operation |
 |--------|----------|-----------|
@@ -124,6 +136,8 @@ Each instruction is **16 bits**: `opcode[15:12]` + `operand_address[11:0]`
 | `0101` | **JGE** | PC ← addr if ACC ≥ 0 (sign bit = 0) |
 | `0110` | **JNE** | PC ← addr if ACC ≠ 0 |
 | `0111` | **STP** | Halt processor |
+
+![Instruction set reference](microprocessor%27s%20instruction%20list.png)
 
 ### Pre-loaded Verification Program
 
@@ -230,6 +244,8 @@ Step 2 — Concurrent summation:
 ```
 
 All partial products are generated and summed simultaneously — single-cycle combinational multiplication. The testbench `tb_multiplier.vhd` exhaustively verifies all 256 input combinations (0–15 × 0–15) with assertions.
+
+![Multiplier schematic](concurrent%20multiplier%20design.png)
 
 ---
 
