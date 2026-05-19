@@ -2,123 +2,117 @@
 
 A fully functional, custom-designed 16-bit microprocessor implemented entirely in VHDL, synthesized and deployed on a **Xilinx FPGA board**. Built from first principles as an academic project at ENICarthage (Infotronics Engineering, Tunisia).
 
-The project includes **two complete implementations** of the control unit — one behavioral and one structural — along with a standalone concurrent hardware multiplier.
+The project includes **two complete implementations** of the control unit — one behavioral and one structural — along with a standalone concurrent hardware multiplier, each fully simulated and verified.
 
 ---
 
 ## Project Structure
 
-All production files live in the `adjusted versions/` folder.
-
-| File | Description |
-|------|-------------|
-| `microproc_behavioral.vhd` | All datapath components + behavioral FSM + top-level `microproc` entity |
-| `fsm_structural.vhd` | Structural FSM controller — pure boolean equations, no enumerated states |
-| `microproc_structural.vhd` | Top-level `microproc_str` entity wiring the structural FSM to the shared datapath |
-| `tb_behavioral.vhd` | Testbench for the behavioral design |
-| `tb_structural.vhd` | Testbench for the structural design |
-| `wave_behavioral.do` | ModelSim wave script for behavioral simulation |
-| `wave_structural.do` | ModelSim wave script for structural simulation |
-| `simulation_transcript.txt` | Full behavioral simulation transcript showing correct execution |
-| `behavioral_waveform_*.png` | Behavioral waveform screenshots (3 time windows) |
-| `structural_waveform_*.png` | Structural waveform screenshots (3 time windows) |
-| `multiplier/multiplier.vhd` | Standalone concurrent 4×4-bit hardware multiplier |
+```
+microproc/
+├── microproc_behavioral.vhd        # All datapath components + behavioral FSM + top-level microproc
+├── fsm_structural.vhd              # Structural FSM — pure boolean equations, no enumerated states
+├── microproc_structural.vhd        # Top-level microproc_str wiring structural FSM to shared datapath
+├── tb_behavioral.vhd               # Testbench — behavioral design
+├── tb_structural.vhd               # Testbench — structural design
+├── wave_behavioral.do              # ModelSim wave script — behavioral
+├── wave_structural.do              # ModelSim wave script — structural (includes state encoding legend)
+├── simulation_transcript.txt       # Full behavioral simulation transcript
+├── behavioral_waveform_0ns_240ns.png
+├── behavioral_waveform_240ns_480ns.png
+├── behavioral_waveform_480ns_720ns.png
+├── structural_waveform_0ns_240ns.png
+├── structural_waveform_240ns_480ns.png
+├── structural_waveform_480ns_720ns.png
+└── multiplier/
+    ├── multiplier.vhd              # Concurrent 4×4-bit hardware multiplier
+    ├── tb_multiplier.vhd           # Testbench — all 256 input combinations with assertions
+    ├── multiplier_waveform_full.png
+    ├── multiplier_waveform_zoom.png
+    └── multiplier_waveform_detail.png
+```
 
 ---
 
 ## Architecture Overview
 
-The processor follows a classic **accumulator-based von Neumann architecture**. All instructions operate through a single accumulator register, with operands fetched from a 64KB asynchronous read/write RAM.
+The processor follows a classic **accumulator-based von Neumann architecture**. All instructions operate through a single accumulator register (ACC), with operands fetched from a 4096-word asynchronous RAM.
 
 ### Full Datapath
 
 ```
          ┌─────────────┐
-         │  Async RAM  │ ← 4096 × 16-bit (64KB), R/W, asynchronous
+         │  Async RAM  │ ← 4096 × 16-bit, R/W, asynchronous
          │  (pre-init) │
          └──────┬──────┘
-                │ data bus (16-bit, bidirectional inout)
+                │ data bus (16-bit, bidirectional)
          ┌──────▼──────┐        ┌────────────┐
          │     IR      │        │     PC     │ ← 12-bit program counter
          │ (Instr Reg) │        │  (clocked) │
          └──────┬──────┘        └──────┬─────┘
-          opcode│  addr(11:0)          │ addr(11:0)
+          opcode│  addr[11:0]          │ addr[11:0]
                 │              ┌───────▼──────┐
-                │              │  MUX_12to1   │ ← selA: PC addr vs IR addr
+                │              │  MUX_12to1   │ ← selA: PC addr vs IR operand addr
                 │              └───────┬──────┘
                 │                      │ → RAM address bus
                 │
          ┌──────▼──────┐
-         │  MUX_16to1  │ ← selB: immediate (zero-extended IR addr) vs RAM data
+         │  MUX_16to1  │ ← selB: zero-extended IR addr vs RAM data
          └──────┬──────┘
                 │ B input
          ┌──────▼──────┐        ┌────────────┐
          │     UAL     │◄───────│    ACC     │ ← Accumulator (A input)
          │    (ALU)    │        │  (clocked) │
          └──────┬──────┘        └────────────┘
-                │ ALU result
-                └─→ ACC input / PC input / RAM data bus (via buffer1)
-         ┌─────────────┐
-         │   buffer1   │ ← acc_oe: drives ACC onto RAM data bus for STO
-         └─────────────┘
+                │ ALU result → ACC / PC / RAM data bus (via tri-state buffer)
 ```
 
 ---
 
 ## Component Breakdown
 
-### `Async_RAM` — 64KB Asynchronous Read/Write Memory
-- **4,096 addresses × 16 bits** = 64KB total
-- Fully **asynchronous** — no clock dependency, responds immediately to address/WE changes
-- Bidirectional `data` bus (`inout`): reads when `we='0'`, writes when `we='1'`, drives high-Z otherwise to avoid bus contention
-- Pre-initialized with a 7-instruction program (addresses 0–6) and data operands at addresses 2048–2050
+### `Async_RAM` — Asynchronous Read/Write Memory
+- **4,096 addresses × 16 bits**, fully asynchronous (no clock)
+- Bidirectional `data` bus (`inout`): drives RAM data when `we='0'`, receives data when `we='1'`, high-Z otherwise
+- Pre-initialized with a 14-instruction verification program and data operands
 
 ### `PC` — Program Counter
 - 12-bit clocked register, loads new address on rising edge when `pc_ld='1'`
-- Feeds the RAM address bus via MUX_12to1 during instruction fetch
+- Connected to the RAM address bus via MUX_12to1 during instruction fetch
 
 ### `IR` — Instruction Register
-- 16-bit clocked register, splits fetched instruction into:
-  - `opcode[3:0]` — upper 4 bits → sent to FSM controller
-  - `B[11:0]` — lower 12 bits → operand/jump address → fed to MUX_12to1
+- 16-bit clocked register, splits each fetched instruction into:
+  - `opcode[15:12]` — upper 4 bits → FSM controller
+  - `operand[11:0]` — lower 12 bits → operand/jump address → MUX_12to1
 
 ### `ACC` — Accumulator
-- 16-bit clocked register, the sole working register of the processor
-- Outputs two status flags to the FSM controller:
-  - `accZ` — high when ACC ≠ 0 (used by JNE)
+- 16-bit clocked register, sole working register of the processor
+- Drives two status flags to the FSM:
+  - `accZ` — `'1'` when ACC ≠ 0 (used by JNE)
   - `acc15` — MSB of ACC, i.e. sign bit (used by JGE)
 
-### `UAL` — ALU (Unité Arithmétique et Logique)
-- 16-bit ALU with 2-bit function select:
+### `UAL` — ALU
+- 16-bit ALU, 2-bit function select:
 
-| `alufs` | Operation | Purpose |
+| `alufs` | Operation | Used by |
 |---------|-----------|---------|
-| `"00"` | Pass B through | LDA — load RAM value into ACC |
-| `"11"` | B + 1 | Increment PC after fetch |
-| `"10"` | A + B | ADD instruction |
-| `"01"` | A − B | SUB instruction |
+| `"00"` | Pass B | LDA |
+| `"11"` | B + 1 | PC increment |
+| `"10"` | A + B | ADD |
+| `"01"` | A − B | SUB |
 
-- Built from generic N-bit `adder` and `subber` components, each structurally composed of cascaded `Full_Adder` / `Full_Subber` instances (ripple-carry design)
+- Built from generic N-bit `adder` and `subber`, each a ripple-carry chain of `Full_Adder` / `Full_Subber` instances
 
-### `MUX_12to1` — 12-bit Address Multiplexer
-- Controlled by `selA`, selects the RAM address source:
-  - `'0'` → PC output (fetch next instruction)
-  - `'1'` → IR operand address (memory access or jump target)
-
-### `MUX_16to1` — 16-bit Data Multiplexer
-- Controlled by `selB`, selects the ALU B-input:
-  - `'0'` → IR address zero-extended to 16 bits (used as immediate for PC increment)
-  - `'1'` → data from RAM bus (memory operand for ADD/SUB/LDA)
-
-### `buffer1` — Tri-state Output Buffer
-- Drives the accumulator value onto the bidirectional RAM data bus during STO
-- Outputs high-Z when `acc_oe='0'`, preventing bus conflict during reads
+### `MUX_12to1` / `MUX_16to1` / `buffer1`
+- **MUX_12to1** (`selA`): selects RAM address — PC output (`'0'`) or IR operand (`'1'`)
+- **MUX_16to1** (`selB`): selects ALU B-input — zero-extended IR addr (`'0'`) or RAM data (`'1'`)
+- **buffer1**: tri-state buffer — drives ACC onto the data bus during STO, high-Z otherwise
 
 ---
 
 ## Instruction Set
 
-Each instruction is **16 bits wide**: `opcode[15:12]` + `operand_address[11:0]`
+Each instruction is **16 bits**: `opcode[15:12]` + `operand_address[11:0]`
 
 | Opcode | Mnemonic | Operation |
 |--------|----------|-----------|
@@ -131,41 +125,53 @@ Each instruction is **16 bits wide**: `opcode[15:12]` + `operand_address[11:0]`
 | `0110` | **JNE** | PC ← addr if ACC ≠ 0 |
 | `0111` | **STP** | Halt processor |
 
-### Pre-loaded Program (RAM addresses 0–6)
-```
-Addr  Instruction            Decoded
-────  ─────────────────────  ──────────────────────────────
-0     0000 100000000000      LDA  2048   → ACC = RAM[2048] = 4
-1     0011 100000000001      SUB  2049   → ACC = ACC - RAM[2049] = 4-4 = 0
-2     0110 000000000101      JNE  5      → ACC=0, skip (fall through)
-3     0010 100000000010      ADD  2050   → ACC = ACC + RAM[2050] = 0+5 = 5
-4     0100 000000000110      JMP  6      → jump to HALT
-5     0001 100000000010      STO  2050   → RAM[2050] = ACC (skipped)
-6     0111 000000000000      STP        → HALT
+### Pre-loaded Verification Program
 
-Data: RAM[2048]=4, RAM[2049]=4, RAM[2050]=5
+The RAM is pre-initialized with a 14-instruction program that exercises every instruction and both outcomes of every branch:
+
 ```
+Addr  Mnemonic       Effect
+────  ─────────────  ──────────────────────────────────────────
+ 0    LDA 2048       ACC = 10
+ 1    ADD 2049       ACC = 15  (10 + 5)
+ 2    STO 2050       RAM[2050] = 15
+ 3    LDA 2051       ACC = 3   (load loop counter)
+ 4    SUB 2052       ACC = ACC − 1          ◄─┐ countdown loop
+ 5    JNE 4          jump to 4 if ACC ≠ 0   ──┘ (taken 3×, then falls through)
+ 6    JGE 8          ACC=0 ≥ 0 → taken, jump to 8
+ 7    JMP 11         skipped
+ 8    LDA 2053       ACC = 0xFFFF  (−1 in two's complement)
+ 9    JGE 11         ACC < 0 → not taken, fall through
+10    JMP 12         jump to correct halt
+11    JMP 13         wrong-path indicator (unreachable on correct execution)
+12    STP            correct halt  ✓
+13    STP            wrong-path halt (reachable only if branch logic is broken)
+
+Data section:
+  RAM[2048] = 10    RAM[2049] = 5     RAM[2050] = 0 (result slot)
+  RAM[2051] = 3     RAM[2052] = 1     RAM[2053] = 0xFFFF
+```
+
+Correct execution always terminates at address 12. Termination at address 13 indicates a branch logic fault.
 
 ---
 
 ## FSM Control Unit — Two Implementations
 
 ### 1. Behavioral FSM (`machine_etat`)
-Implemented using VHDL enumerated state types and case statements. Execute cycle:
+Uses VHDL enumerated state types and `case` statements:
 
 ```
 LOAD_INSTRUCTION → INCREMENT_PC → DECODE_OPCODE
-    → EXECUTE_ALU_OPERATION   (opcodes ADD, SUB)
-    → MEMORY_ACCESS           (opcodes LDA, STO)
-    → JUMP_CONDITIONAL        (opcodes JMP, JGE, JNE — conditional on accZ/acc15)
-    → HALT_PROCESSOR          (opcode STP — latches forever)
-    → LOAD_INSTRUCTION        (next fetch)
+    → EXECUTE_ALU_OPERATION   (ADD, SUB)
+    → MEMORY_ACCESS           (LDA, STO)
+    → JUMP_CONDITIONAL        (JMP, JGE, JNE)
+    → HALT_PROCESSOR          (STP — self-loop)
+    → LOAD_INSTRUCTION
 ```
 
 ### 2. Structural FSM (`machine_etat_structurelle`)
-Implements the **identical state machine** using only minimized boolean logic equations — no enumerated states, no case statements. State is a raw 4-bit vector; all transitions and outputs are expressed as direct combinational logic derived from the state transition truth table.
-
-State encoding:
+Implements the identical state machine using only minimized boolean logic equations — no `case` statements, no enumerated types. State is a raw 4-bit vector; all transitions and outputs are direct combinational logic derived from the state transition truth table.
 
 | Hex | State | Description |
 |-----|-------|-------------|
@@ -173,45 +179,63 @@ State encoding:
 | `1` | INCR | Increment PC |
 | `2` | DECODE | Decode opcode, evaluate branch condition |
 | `3` | ALU_EXEC | Execute ADD or SUB |
-| `4` | MEM | LDA (read RAM → ACC) or STO (write ACC → RAM) |
+| `4` | MEM | LDA (RAM → ACC) or STO (ACC → RAM) |
 | `5` | JUMP | Load branch target into PC |
 | `6` | HALT | STP reached — self-loop |
 
-This structural approach mirrors what synthesis tools produce internally and demonstrates gate-level understanding of FSM design — equivalent to manually deriving logic from a Karnaugh map.
+This approach mirrors what synthesis tools produce internally and demonstrates gate-level FSM design — equivalent to manually deriving logic from a Karnaugh map.
+
+---
+
+## Simulation Results
+
+### Behavioral
+
+![Behavioral waveform 0–240 ns](behavioral_waveform_0ns_240ns.png)
+![Behavioral waveform 240–480 ns](behavioral_waveform_240ns_480ns.png)
+![Behavioral waveform 480–720 ns](behavioral_waveform_480ns_720ns.png)
+
+### Structural
+
+![Structural waveform 0–240 ns](structural_waveform_0ns_240ns.png)
+![Structural waveform 240–480 ns](structural_waveform_240ns_480ns.png)
+![Structural waveform 480–720 ns](structural_waveform_480ns_720ns.png)
+
+### Multiplier
+
+![Multiplier full run](multiplier/multiplier_waveform_full.png)
+![Multiplier zoom](multiplier/multiplier_waveform_zoom.png)
 
 ---
 
 ## Concurrent 4×4-bit Hardware Multiplier
 
-A standalone hardware entity implementing unsigned 4-bit × 4-bit multiplication using purely combinational concurrent logic — **zero clock cycles required**.
+A standalone entity in `multiplier/` implementing unsigned 4-bit × 4-bit multiplication using purely combinational logic — **zero clock cycles**.
 
 ### Method: Parallel Partial Product Accumulation
+
 ```
 A[3:0] × B[3:0] → P[7:0]
 
-Step 1 — Partial products via MUX (A if B[i]=1, else 0000):
-  om1 = A × B[0]  →  padded: "0000" & om1        (×2^0)
-  om2 = A × B[1]  →  padded: "000"  & om2 & "0"  (×2^1)
-  om3 = A × B[2]  →  padded: "00"   & om3 & "00" (×2^2)
-  om4 = A × B[3]  →  padded: "0"    & om4 & "000"(×2^3)
+Step 1 — Partial products (MUX: pass A if B[i]=1, else 0000):
+  pp0 = A × B[0]  →  "0000" & pp0          (weight 2^0)
+  pp1 = A × B[1]  →  "000"  & pp1 & "0"    (weight 2^1)
+  pp2 = A × B[2]  →  "00"   & pp2 & "00"   (weight 2^2)
+  pp3 = A × B[3]  →  "0"    & pp3 & "000"  (weight 2^3)
 
-Step 2 — Concurrent addition:
-  S1 = om1 + om2
-  S2 = om3 + om4
-  P  = S1  + S2
+Step 2 — Concurrent summation:
+  s1 = pp0 + pp1
+  s2 = pp2 + pp3
+  P  = s1  + s2
 ```
 
-All partial products are generated and summed **simultaneously in hardware**, exploiting FPGA look-up table parallelism for single-cycle combinational multiplication.
+All partial products are generated and summed simultaneously — single-cycle combinational multiplication. The testbench `tb_multiplier.vhd` exhaustively verifies all 256 input combinations (0–15 × 0–15) with assertions.
 
 ---
 
 ## How to Run
 
-### Simulation (ModelSim)
-
-All files are in `adjusted versions/`. Run in the ModelSim transcript:
-
-**Behavioral:**
+### Behavioral Simulation (ModelSim)
 ```tcl
 vdel -lib work -all
 vlib work
@@ -222,7 +246,7 @@ do wave_behavioral.do
 run 700 ns
 ```
 
-**Structural:**
+### Structural Simulation (ModelSim)
 ```tcl
 vdel -lib work -all
 vlib work
@@ -235,8 +259,19 @@ do wave_structural.do
 run 700 ns
 ```
 
+### Multiplier Simulation (ModelSim)
+```tcl
+vdel -lib work -all
+vlib work
+vcom multiplier.vhd
+vcom tb_multiplier.vhd
+vsim work.tb_multiplier
+run 5200 ns
+```
+All 256 combinations pass with zero assertion errors.
+
 ### Synthesis (Xilinx Vivado / ISE)
-1. Create a new RTL project and add source files
+1. Create a new RTL project, add `microproc_behavioral.vhd` as the source
 2. Set top-level entity to `microproc`
 3. Run Synthesis → Implementation → Generate Bitstream
 4. Program the Xilinx FPGA board via JTAG
@@ -245,10 +280,12 @@ run 700 ns
 
 ## Tools & Platform
 
-- **Language:** VHDL (IEEE 1076)
-- **Simulation:** ModelSim
-- **Synthesis & Deployment:** Xilinx Vivado / ISE
-- **Target Hardware:** Xilinx FPGA board
+| Tool | Purpose |
+|------|---------|
+| VHDL (IEEE 1076) | Hardware description language |
+| ModelSim | Functional simulation |
+| Xilinx Vivado / ISE | Synthesis, implementation, bitstream generation |
+| Xilinx FPGA | Target hardware |
 
 ---
 
