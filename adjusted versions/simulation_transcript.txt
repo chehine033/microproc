@@ -1,0 +1,166 @@
+# ** Note: [DECODE] op=0000 accZ=0 acc15=0
+#    Time: 55 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [ACC_LOAD] A_zero=N A[3:0]=1010
+#    Time: 65 ns  Iteration: 0  Instance: /microproc_tb/DUT/ACC1
+# ** Note: [MEM]    op=0000
+#    Time: 65 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: LDA done - ACC = 10 (0x000A)
+#    Time: 70 ns  Iteration: 0  Instance: /microproc_tb
+# ** Note: [DECODE] op=0010 accZ=1 acc15=0
+#    Time: 95 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [ACC_LOAD] A_zero=N A[3:0]=1111
+#    Time: 105 ns  Iteration: 0  Instance: /microproc_tb/DUT/ACC1
+# ** Note: [ALU]    op=0010
+#    Time: 105 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: ADD done - ACC = 15 (0x000F)
+#    Time: 110 ns  Iteration: 0  Instance: /microproc_tb
+# ** Note: [DECODE] op=0001 accZ=1 acc15=0
+#    Time: 135 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [MEM]    op=0001
+#    Time: 145 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: STO done - RAM[2050] = 15, ACC still 15
+#    Time: 150 ns  Iteration: 0  Instance: /microproc_tb
+# ** Note: [DECODE] op=0000 accZ=1 acc15=0
+#    Time: 175 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [ACC_LOAD] A_zero=N A[3:0]=0011
+#    Time: 185 ns  Iteration: 0  Instance: /microproc_tb/DUT/ACC1
+# ** Note: [MEM]    op=0000
+#    Time: 185 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: LDA done - ACC = 3 (loop counter loaded)
+#    Time: 190 ns  Iteration: 0  Instance: /microproc_tb
+# ** Note: [DECODE] op=0011 accZ=1 acc15=0
+#    Time: 215 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [ACC_LOAD] A_zero=N A[3:0]=0010
+#    Time: 225 ns  Iteration: 0  Instance: /microproc_tb/DUT/ACC1
+# ** Note: [ALU]    op=0011
+#    Time: 225 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [DECODE] op=0110 accZ=1 acc15=0
+#    Time: 255 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: Loop iter 1 - ACC = 2, JNE taken
+#    Time: 270 ns  Iteration: 0  Instance: /microproc_tb
+# ** Note: [DECODE] op=0011 accZ=1 acc15=0
+#    Time: 295 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [ACC_LOAD] A_zero=N A[3:0]=0001
+#    Time: 305 ns  Iteration: 0  Instance: /microproc_tb/DUT/ACC1
+# ** Note: [ALU]    op=0011
+#    Time: 305 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [DECODE] op=0110 accZ=1 acc15=0
+#    Time: 335 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: Loop iter 2 - ACC = 1, JNE taken
+#    Time: 350 ns  Iteration: 0  Instance: /microproc_tb
+# ** Note: [DECODE] op=0011 accZ=1 acc15=0
+#    Time: 375 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [ACC_LOAD] A_zero=Y A[3:0]=0000
+#    Time: 385 ns  Iteration: 0  Instance: /microproc_tb/DUT/ACC1
+# ** Note: [ALU]    op=0011
+#    Time: 385 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [DECODE] op=0110 accZ=0 acc15=0
+#    Time: 415 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: Loop iter 3 - ACC = 0, JNE not taken, exiting loop
+#    Time: 430 ns  Iteration: 0  Instance: /microproc_tb
+# ** Note: [DECODE] op=0101 accZ=0 acc15=0
+#    Time: 445 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: JGE taken - ACC >= 0 (acc15=0), jumping to addr 8
+#    Time: 470 ns  Iteration: 0  Instance: /microproc_tb
+# ** Note: [DECODE] op=0000 accZ=0 acc15=0
+#    Time: 485 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [ACC_LOAD] A_zero=N A[3:0]=1111
+#    Time: 495 ns  Iteration: 0  Instance: /microproc_tb/DUT/ACC1
+# ** Note: [MEM]    op=0000
+#    Time: 495 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: LDA done - ACC = 0xFFFF (-1 in twos complement)
+#    Time: 510 ns  Iteration: 0  Instance: /microproc_tb
+# ** Note: [DECODE] op=0101 accZ=1 acc15=1
+#    Time: 525 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: JGE not taken - ACC < 0 (acc15=1), falling through
+#    Time: 550 ns  Iteration: 0  Instance: /microproc_tb
+# ** Note: [DECODE] op=0100 accZ=1 acc15=1
+#    Time: 555 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: JMP to addr 12 (correct halt)
+#    Time: 590 ns  Iteration: 0  Instance: /microproc_tb
+# ** Note: [DECODE] op=0111 accZ=1 acc15=1
+#    Time: 595 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 605 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 615 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 625 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: STP reached - processor halted
+#    Time: 630 ns  Iteration: 0  Instance: /microproc_tb
+# ** Note: [HALT]   processor stopped
+#    Time: 635 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 645 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 655 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 665 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 675 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 685 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 695 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 705 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 715 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 725 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 735 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 745 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 755 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 765 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 775 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 785 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 795 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 805 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 815 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 825 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: Simulation complete - processor confirmed halted
+#    Time: 830 ns  Iteration: 0  Instance: /microproc_tb
+# ** Note: [HALT]   processor stopped
+#    Time: 835 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 845 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 855 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 865 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 875 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 885 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 895 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 905 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 915 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 925 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 935 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 945 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 955 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 965 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 975 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 985 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach
+# ** Note: [HALT]   processor stopped
+#    Time: 995 ns  Iteration: 0  Instance: /microproc_tb/DUT/mach

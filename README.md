@@ -8,11 +8,21 @@ The project includes **two complete implementations** of the control unit — on
 
 ## Project Structure
 
+All production files live in the `adjusted versions/` folder.
+
 | File | Description |
 |------|-------------|
-| `microprocessor_comportmental.vhd` | Behavioral implementation — all datapath components + behavioral FSM controller + top-level `microproc` entity |
-| `machine_etat_structurelle.vhd` | Alternative structural FSM controller — pure boolean logic equations, no enumerated states |
-| `multiplieur.vhd` | Standalone concurrent 4×4-bit hardware multiplier |
+| `microproc_behavioral.vhd` | All datapath components + behavioral FSM + top-level `microproc` entity |
+| `fsm_structural.vhd` | Structural FSM controller — pure boolean equations, no enumerated states |
+| `microproc_structural.vhd` | Top-level `microproc_str` entity wiring the structural FSM to the shared datapath |
+| `tb_behavioral.vhd` | Testbench for the behavioral design |
+| `tb_structural.vhd` | Testbench for the structural design |
+| `wave_behavioral.do` | ModelSim wave script for behavioral simulation |
+| `wave_structural.do` | ModelSim wave script for structural simulation |
+| `simulation_transcript.txt` | Full behavioral simulation transcript showing correct execution |
+| `behavioral_waveform_*.png` | Behavioral waveform screenshots (3 time windows) |
+| `structural_waveform_*.png` | Structural waveform screenshots (3 time windows) |
+| `multiplier/multiplier.vhd` | Standalone concurrent 4×4-bit hardware multiplier |
 
 ---
 
@@ -153,20 +163,21 @@ LOAD_INSTRUCTION → INCREMENT_PC → DECODE_OPCODE
 ```
 
 ### 2. Structural FSM (`machine_etat_structurelle`)
-Implements the **identical state machine** using only minimized boolean logic equations — no enumerated states, no case statements. State is a raw 4-bit vector and all transitions and outputs are expressed as direct combinational logic:
+Implements the **identical state machine** using only minimized boolean logic equations — no enumerated states, no case statements. State is a raw 4-bit vector; all transitions and outputs are expressed as direct combinational logic derived from the state transition truth table.
 
-```vhdl
--- Next-state logic derived from state transition table:
-S01 <= (not S0 and not S1 and S2 and not S3 and not opcode0 and not opcode1 and not opcode2)
-    or (not S0 and not S1 and S2 and not S3 and opcode0 and opcode1 and opcode2)
-    or (S0 and not S1 and not S2 and S3);
+State encoding:
 
--- Output logic example:
-RnW    <= (not S1) or (not S3);
-acc_ld <= (S2 and S3) or (S1 and not S2) or (S0 and not S3);
-```
+| Hex | State | Description |
+|-----|-------|-------------|
+| `0` | LOAD | Fetch instruction into IR |
+| `1` | INCR | Increment PC |
+| `2` | DECODE | Decode opcode, evaluate branch condition |
+| `3` | ALU_EXEC | Execute ADD or SUB |
+| `4` | MEM | LDA (read RAM → ACC) or STO (write ACC → RAM) |
+| `5` | JUMP | Load branch target into PC |
+| `6` | HALT | STP reached — self-loop |
 
-This structural approach mirrors what synthesis tools produce internally and demonstrates gate-level understanding of finite state machine design — equivalent to manually deriving logic from a Karnaugh map.
+This structural approach mirrors what synthesis tools produce internally and demonstrates gate-level understanding of FSM design — equivalent to manually deriving logic from a Karnaugh map.
 
 ---
 
@@ -197,10 +208,32 @@ All partial products are generated and summed **simultaneously in hardware**, ex
 ## How to Run
 
 ### Simulation (ModelSim)
-1. Create a new project and add all `.vhd` files
-2. Compile `microprocessor_comportmental.vhd` first (contains component definitions)
-3. Set `microproc` as the top-level simulation entity
-4. Run simulation — observe `data`, `adresse`, `s` (ALU output), `accz`, `acc15`, and RAM contents in the waveform viewer to trace instruction execution
+
+All files are in `adjusted versions/`. Run in the ModelSim transcript:
+
+**Behavioral:**
+```tcl
+vdel -lib work -all
+vlib work
+vcom microproc_behavioral.vhd
+vcom tb_behavioral.vhd
+vsim work.microproc_tb
+do wave_behavioral.do
+run 700 ns
+```
+
+**Structural:**
+```tcl
+vdel -lib work -all
+vlib work
+vcom microproc_behavioral.vhd
+vcom fsm_structural.vhd
+vcom microproc_structural.vhd
+vcom tb_structural.vhd
+vsim work.microproc_str_tb
+do wave_structural.do
+run 700 ns
+```
 
 ### Synthesis (Xilinx Vivado / ISE)
 1. Create a new RTL project and add source files

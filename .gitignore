@@ -1,0 +1,10 @@
+# ModelSim build artifacts
+work/
+vsim.wlf
+*.cr.mti
+*.mpf
+*.wlf
+transcript
+
+# Editor backups
+*.bak
