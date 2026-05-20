@@ -146,24 +146,24 @@ The RAM is pre-initialized with a 14-instruction program that exercises every in
 ```
 Addr  Mnemonic       Effect
 ────  ─────────────  ──────────────────────────────────────────
- 0    LDA 2048       ACC = 10
- 1    ADD 2049       ACC = 15  (10 + 5)
- 2    STO 2050       RAM[2050] = 15
- 3    LDA 2051       ACC = 3   (load loop counter)
- 4    SUB 2052       ACC = ACC − 1          ◄─┐ countdown loop
+ 0    LDA 14         ACC = 10
+ 1    ADD 15         ACC = 15  (10 + 5)
+ 2    STO 16         RAM[16] = 15
+ 3    LDA 17         ACC = 3   (load loop counter)
+ 4    SUB 18         ACC = ACC − 1          ◄─┐ countdown loop
  5    JNE 4          jump to 4 if ACC ≠ 0   ──┘ (taken 3×, then falls through)
  6    JGE 8          ACC=0 ≥ 0 → taken, jump to 8
  7    JMP 11         skipped
- 8    LDA 2053       ACC = 0xFFFF  (−1 in two's complement)
+ 8    LDA 19         ACC = 0xFFFF  (−1 in two's complement)
  9    JGE 11         ACC < 0 → not taken, fall through
 10    JMP 12         jump to correct halt
 11    JMP 13         wrong-path indicator (unreachable on correct execution)
 12    STP            correct halt  ✓
 13    STP            wrong-path halt (reachable only if branch logic is broken)
 
-Data section:
-  RAM[2048] = 10    RAM[2049] = 5     RAM[2050] = 0 (result slot)
-  RAM[2051] = 3     RAM[2052] = 1     RAM[2053] = 0xFFFF
+Data section (immediately after instructions — all within 64-word address space):
+  RAM[14] = 10    RAM[15] = 5     RAM[16] = 0 (result slot)
+  RAM[17] = 3     RAM[18] = 1     RAM[19] = 0xFFFF
 ```
 
 Correct execution always terminates at address 12. Termination at address 13 indicates a branch logic fault.
@@ -219,6 +219,44 @@ This approach mirrors what synthesis tools produce internally and demonstrates g
 
 ![Multiplier full run](multiplier/multiplier_waveform_full.png)
 ![Multiplier zoom](multiplier/multiplier_waveform_zoom.png)
+
+---
+
+## FPGA Synthesis
+
+Synthesized using **Quartus Prime Pro 26.1.0** targeting the **Cyclone 10 GX (10CX085YF672E5G)**.
+
+### Adaptations for FPGA
+
+The design was originally written for behavioral simulation using an asynchronous RAM model — standard academic/ASIC practice. Three targeted changes were made for FPGA synthesis:
+
+| Change | Reason |
+|--------|--------|
+| Split `data : inout` → `data_in : in` + `data_out : out` | Cyclone 10 GX has no internal tri-state; `inout` prevents RAM inference and maps the entire memory to 65,536 flip-flops |
+| Synchronous write (clock-gated process) | Eliminates latch inference from concurrent conditional assignment |
+| RAM depth 4096 → 64 words, data remapped to addresses 14–19 | 4096×16 flip-flops fills the device; 64×16 costs 2% with identical logical behavior |
+
+The FSM, datapath, ALU, instruction set, and verification program are functionally identical. Simulation results remain valid and were captured from the behavioral model prior to synthesis adaptation.
+
+### Results
+
+| Metric | Value |
+|--------|-------|
+| Device | Cyclone 10 GX 10CX085YF672E5G |
+| Logic utilization | 581 / 31,000 ALMs (2%) |
+| Registers | 1,082 |
+| Timing constraint | 50 MHz |
+| Slack | +7.41 ns |
+| Fmax | ~79 MHz |
+
+### Flow Summary
+![Flow Summary](Flow%20summary%20of%20behavioral%20of%20microproc.png)
+
+### Setup Summary (Timing)
+![Setup Summary](setup%20summary%20of%20behavioral%20of%20microproc.png)
+
+### RTL Viewer
+![RTL View](RTL%20view%20of%20behavioral%20of%20microproc.png)
 
 ---
 
@@ -286,11 +324,12 @@ run 5200 ns
 ```
 All 256 combinations pass with zero assertion errors.
 
-### Synthesis (Xilinx Vivado / ISE)
+### Synthesis (Quartus Prime Pro — Cyclone 10 GX)
 1. Create a new RTL project, add `microproc_behavioral.vhd` as the source
 2. Set top-level entity to `microproc`
-3. Run Synthesis → Implementation → Generate Bitstream
-4. Program the Xilinx FPGA board via JTAG
+3. Select device: Cyclone 10 GX `10CX085YF672E5G`
+4. Create an SDC constraints file with: `create_clock -period 20.000 [get_ports clk]`
+5. Run Compilation (Ctrl+L)
 
 ---
 

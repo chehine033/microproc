@@ -155,58 +155,66 @@ use ieee.numeric_std.all;
 
 entity Async_RAM is
     port(
-        address : in    std_logic_vector(11 downto 0);
-        data    : inout std_logic_vector(15 downto 0);
-        we      : in    std_logic
+        clk      : in  std_logic;
+        address  : in  std_logic_vector(11 downto 0);
+        data_in  : in  std_logic_vector(15 downto 0);
+        we       : in  std_logic;
+        data_out : out std_logic_vector(15 downto 0)
     );
 end Async_RAM;
 
 architecture archARAM of Async_RAM is
-    type ram_type is array (4095 downto 0) of std_logic_vector(15 downto 0);
-    -- Program (addr 0-13) + data (addr 2048-2053)
+    type ram_type is array (63 downto 0) of std_logic_vector(15 downto 0);
+    -- Program (addr 0-13) + data (addr 14-19) — all within 64 words
     --
-    --  0: LDA 2048   ACC = 10
-    --  1: ADD 2049   ACC = 15
-    --  2: STO 2050   RAM[2050] = 15
-    --  3: LDA 2051   ACC = 3  (loop counter)
-    --  4: SUB 2052   ACC = ACC - 1          <─┐ loop
-    --  5: JNE 4      jump to 4 if ACC ≠ 0   ──┘
-    --  6: JGE 8      ACC=0 ≥ 0  → taken, jump to 8
-    --  7: JMP 11     (skipped)
-    --  8: LDA 2053   ACC = 0xFFFF (-1 in two's complement)
-    --  9: JGE 11     ACC=-1 < 0 → not taken, fall through
-    -- 10: JMP 12     jump to correct halt
-    -- 11: JMP 13     only reachable on wrong JGE behaviour
-    -- 12: STP        correct halt
-    -- 13: STP        wrong-path indicator
+    --  0: LDA 14    ACC = 10
+    --  1: ADD 15    ACC = 15  (10 + 5)
+    --  2: STO 16    RAM[16] = 15
+    --  3: LDA 17    ACC = 3  (loop counter)
+    --  4: SUB 18    ACC = ACC - 1          <─┐ loop
+    --  5: JNE 4     jump to 4 if ACC ≠ 0   ──┘
+    --  6: JGE 8     ACC=0 ≥ 0  → taken, jump to 8
+    --  7: JMP 11    (skipped)
+    --  8: LDA 19    ACC = 0xFFFF (-1 in two's complement)
+    --  9: JGE 11    ACC=-1 < 0 → not taken, fall through
+    -- 10: JMP 12    jump to correct halt
+    -- 11: JMP 13    only reachable on wrong JGE behaviour
+    -- 12: STP       correct halt
+    -- 13: STP       wrong-path indicator
     signal RAM : ram_type := (
-        0      => "0000100000000000",   -- LDA 2048
-        1      => "0010100000000001",   -- ADD 2049
-        2      => "0001100000000010",   -- STO 2050
-        3      => "0000100000000011",   -- LDA 2051
-        4      => "0011100000000100",   -- SUB 2052
-        5      => "0110000000000100",   -- JNE 4
-        6      => "0101000000001000",   -- JGE 8
-        7      => "0100000000001011",   -- JMP 11
-        8      => "0000100000000101",   -- LDA 2053
-        9      => "0101000000001011",   -- JGE 11
-        10     => "0100000000001100",   -- JMP 12
-        11     => "0100000000001101",   -- JMP 13
-        12     => "0111000000000000",   -- STP  (correct halt)
-        13     => "0111000000000000",   -- STP  (wrong-path indicator)
-        2048   => "0000000000001010",   -- 10
-        2049   => "0000000000000101",   -- 5
-        2050   => "0000000000000000",   -- result slot (will hold 15)
-        2051   => "0000000000000011",   -- 3  (loop counter)
-        2052   => "0000000000000001",   -- 1  (decrement step)
-        2053   => "1111111111111111",   -- 0xFFFF  (-1 in two's complement)
+        0  => "0000000000001110",   -- LDA 14
+        1  => "0010000000001111",   -- ADD 15
+        2  => "0001000000010000",   -- STO 16
+        3  => "0000000000010001",   -- LDA 17
+        4  => "0011000000010010",   -- SUB 18
+        5  => "0110000000000100",   -- JNE 4
+        6  => "0101000000001000",   -- JGE 8
+        7  => "0100000000001011",   -- JMP 11
+        8  => "0000000000010011",   -- LDA 19
+        9  => "0101000000001011",   -- JGE 11
+        10 => "0100000000001100",   -- JMP 12
+        11 => "0100000000001101",   -- JMP 13
+        12 => "0111000000000000",   -- STP  (correct halt)
+        13 => "0111000000000000",   -- STP  (wrong-path indicator)
+        14 => "0000000000001010",   -- 10
+        15 => "0000000000000101",   -- 5
+        16 => "0000000000000000",   -- result slot (will hold 15)
+        17 => "0000000000000011",   -- 3  (loop counter)
+        18 => "0000000000000001",   -- 1  (decrement step)
+        19 => "1111111111111111",   -- 0xFFFF  (-1 in two's complement)
         others => (others => '0')
     );
 begin
-    RAM(to_integer(unsigned(address))) <= data when we = '1';
-    with we select
-        data <= RAM(to_integer(unsigned(address))) when '0',
-                "ZZZZZZZZZZZZZZZZ"                 when others;
+    process(clk)
+    begin
+        if rising_edge(clk) then
+            if we = '1' then
+                RAM(to_integer(unsigned(address(5 downto 0)))) <= data_in;
+            end if;
+        end if;
+    end process;
+
+    data_out <= RAM(to_integer(unsigned(address(5 downto 0))));
 end archARAM;
 
 
@@ -508,7 +516,11 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
 entity microproc is
-    port(clk, reset : in std_logic);
+    port(
+        clk     : in  std_logic;
+        reset   : in  std_logic;
+        acc_out : out std_logic_vector(15 downto 0)
+    );
 end microproc;
 
 architecture archmicproc of microproc is
@@ -518,11 +530,10 @@ architecture archmicproc of microproc is
     component mux_16to1
         port(A, B : in STD_LOGIC_VECTOR(15 downto 0); S0 : in STD_LOGIC; Z : out STD_LOGIC_VECTOR(15 downto 0));
     end component;
-    component buffer1
-        port(a : in std_logic_vector(15 downto 0); enable : in std_logic; b : out std_logic_vector(15 downto 0));
-    end component;
     component Async_RAM
-        port(address : in std_logic_vector(11 downto 0); data : inout std_logic_vector(15 downto 0); we : in std_logic);
+        port(clk : in std_logic; address : in std_logic_vector(11 downto 0);
+             data_in : in std_logic_vector(15 downto 0); we : in std_logic;
+             data_out : out std_logic_vector(15 downto 0));
     end component;
     component UAL
         port(a, b : in std_logic_vector(15 downto 0); alufs : in std_logic_vector(1 downto 0);
@@ -551,20 +562,20 @@ architecture archmicproc of microproc is
     signal RnW, selA, selB               : std_logic;
     signal pc_ld, ir_ld, acc_ld, acc_oe : std_logic;
     signal ualoorflag, we                : std_logic;
-    signal data, s, b, a, addresse16    : std_logic_vector(15 downto 0);
+    signal data_from_ram, s, b, a, addresse16 : std_logic_vector(15 downto 0);
     signal adresse, s1, s2              : std_logic_vector(11 downto 0);
 begin
     addresse16 <= "0000" & adresse;
     we         <= not RnW;
+    acc_out    <= a;
 
-    muxA    : mux_12to1 port map(s1, s2, selA, adresse);
-    buffer2 : buffer1   port map(a, acc_oe, data);
-    muxB    : mux_16to1 port map(addresse16, data, selB, b);
-    IR1     : IR        port map(clk, ir_ld, data, s2, opcod);
-    PC1     : PC        port map(clk, pc_ld, s, s1);
-    ACC1    : ACC       port map(s, acc_ld, clk, accz, acc15, a);
-    UAL1    : UAL       port map(a, b, aluf, ualoorflag, s);
-    RAM     : Async_RAM port map(adresse, data, we);
+    muxA : mux_12to1 port map(s1, s2, selA, adresse);
+    muxB : mux_16to1 port map(addresse16, data_from_ram, selB, b);
+    IR1  : IR        port map(clk, ir_ld, data_from_ram, s2, opcod);
+    PC1  : PC        port map(clk, pc_ld, s, s1);
+    ACC1 : ACC       port map(s, acc_ld, clk, accz, acc15, a);
+    UAL1 : UAL       port map(a, b, aluf, ualoorflag, s);
+    RAM  : Async_RAM port map(clk, adresse, a, we, data_from_ram);
     mach    : machine_etat port map(clk, reset, accz, acc15, opcod,
                                     selA, selB, pc_ld, ir_ld,
                                     acc_ld, acc_oe, aluf, RnW);

@@ -7,7 +7,7 @@ end microproc_tb;
 architecture sim of microproc_tb is
 
     component microproc
-        port(clk, reset : in std_logic);
+        port(clk, reset : in std_logic; acc_out : out std_logic_vector(15 downto 0));
     end component;
 
     constant CLK_PERIOD : time := 10 ns;
@@ -17,7 +17,7 @@ architecture sim of microproc_tb is
 
 begin
 
-    DUT : microproc port map(clk => clk, reset => reset);
+    DUT : microproc port map(clk => clk, reset => reset, acc_out => open);
 
     clk <= not clk after CLK_PERIOD / 2;
 
